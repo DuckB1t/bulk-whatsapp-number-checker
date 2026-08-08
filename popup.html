@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BWAV</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon" id="brandIcon"></span>
+        <span class="brand-name">BWAV</span>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="single" id="tabBtnSingle">
+          <span class="icon-wrap" id="iconSingle"></span>
+          <span>Single</span>
+        </button>
+        <button class="nav-tab" data-tab="bulk" id="tabBtnBulk">
+          <span class="icon-wrap" id="iconBulk"></span>
+          <span>Bulk</span>
+        </button>
+        <button class="nav-tab" data-tab="settings" id="tabBtnSettings">
+          <span class="icon-wrap" id="iconSettings"></span>
+          <span>Settings</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Main Content Views -->
+    <main class="app-content">
+
+      <!-- Single Mode View -->
+      <section class="view-panel active" id="viewSingle">
+        <div class="form-group">
+          <label for="singleCountrySelect">Country</label>
+          <select id="singleCountrySelect" class="form-control"></select>
+        </div>
+
+        <div class="form-group">
+          <label for="singlePhoneInput">Phone Number</label>
+          <input type="text" id="singlePhoneInput" class="form-control" placeholder="+8801712345678 or 01712345678">
+        </div>
+
+        <button id="btnCheckSingle" class="btn btn-primary btn-block">
+          <span class="icon-wrap" id="iconCheckSingle"></span>
+          <span>Check Number</span>
+        </button>
+
+        <div id="singleResultCard" class="result-card hidden">
+          <div class="result-status-wrap">
+            <span id="singleResultIcon" class="result-icon"></span>
+            <div class="result-text-group">
+              <div id="singleResultTitle" class="result-title"></div>
+              <div id="singleResultDetail" class="result-detail"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bulk Mode View -->
+      <section class="view-panel" id="viewBulk">
+        <!-- Input Form State -->
+        <div id="bulkInputContainer" class="bulk-subview">
+          <div class="form-group">
+            <div class="label-row">
+              <label for="bulkCountrySelect">Default Country</label>
+            </div>
+            <select id="bulkCountrySelect" class="form-control"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="bulkTextarea">Phone Numbers</label>
+            <textarea id="bulkTextarea" class="form-control text-area" placeholder="Paste numbers here (one per line, comma, semicolon or tab separated)&#10;01712345678&#10;+8801812345678&#10;8801912345678"></textarea>
+          </div>
+
+          <div class="file-import-row">
+            <button id="btnImportTxt" class="btn btn-secondary">
+              <span class="icon-wrap" id="iconImportTxt"></span>
+              <span>Import TXT</span>
+            </button>
+            <button id="btnImportCsv" class="btn btn-secondary">
+              <span class="icon-wrap" id="iconImportCsv"></span>
+              <span>Import CSV</span>
+            </button>
+            <input type="file" id="fileInputTxt" accept=".txt" class="hidden">
+            <input type="file" id="fileInputCsv" accept=".csv,.txt" class="hidden">
+          </div>
+
+          <!-- Pre-check stats box -->
+          <div id="bulkStatsBox" class="stats-box hidden">
+            <div class="stat-pill">
+              <span class="stat-num" id="statImported">0</span>
+              <span class="stat-lbl">Imported</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-num" id="statDuplicates">0</span>
+              <span class="stat-lbl">Duplicates</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-num" id="statInvalid">0</span>
+              <span class="stat-lbl">Invalid</span>
+            </div>
+            <div class="stat-pill highlight">
+              <span class="stat-num" id="statReady">0</span>
+              <span class="stat-lbl">Ready</span>
+            </div>
+          </div>
+
+          <button id="btnStartBulk" class="btn btn-primary btn-block">
+            <span class="icon-wrap" id="iconStartBulk"></span>
+            <span>Check Numbers</span>
+          </button>
+        </div>
+
+        <!-- Progress / Active Job State -->
+        <div id="bulkProgressContainer" class="bulk-subview hidden">
+          <div class="progress-header">
+            <span id="jobStatusBadge" class="badge">Running</span>
+            <span id="jobProgressText" class="progress-count">0 / 0</span>
+          </div>
+
+          <div class="progress-track">
+            <div id="progressBarFill" class="progress-fill" style="width: 0%;"></div>
+          </div>
+
+          <div class="timer-row">
+            <span id="jobElapsedTimer" class="timer-text">Elapsed: 0s</span>
+            <span id="jobEtaTimer" class="timer-text">ETA: --</span>
+          </div>
+
+          <!-- Current number indicator -->
+          <div class="current-number-card">
+            <span class="current-label">Current Number</span>
+            <span id="currentNumberVal" class="current-val">+8801712345678</span>
+          </div>
+
+          <!-- Breakdown stat counters -->
+          <div class="breakdown-grid">
+            <div class="breakdown-card">
+              <span class="bk-val text-success" id="bkRegistered">0</span>
+              <span class="bk-lbl">Registered</span>
+            </div>
+            <div class="breakdown-card">
+              <span class="bk-val text-danger" id="bkNotRegistered">0</span>
+              <span class="bk-lbl">Not Registered</span>
+            </div>
+            <div class="breakdown-card">
+              <span class="bk-val text-warning" id="bkUnknown">0</span>
+              <span class="bk-lbl">Unknown</span>
+            </div>
+          </div>
+
+          <!-- Control Buttons -->
+          <div class="action-buttons-row">
+            <button id="btnPauseJob" class="btn btn-secondary flex-1">
+              <span class="icon-wrap" id="iconPause"></span>
+              <span>Pause</span>
+            </button>
+            <button id="btnResumeJob" class="btn btn-primary flex-1 hidden">
+              <span class="icon-wrap" id="iconResume"></span>
+              <span>Resume</span>
+            </button>
+            <button id="btnCancelJob" class="btn btn-danger flex-1">
+              <span class="icon-wrap" id="iconCancel"></span>
+              <span>Cancel</span>
+            </button>
+          </div>
+
+          <!-- Export Buttons (Visible on finish / pause / cancel) -->
+          <div id="bulkExportRow" class="export-buttons-row hidden">
+            <button id="btnExportHtml" class="btn btn-outline flex-1">
+              <span class="icon-wrap" id="iconExportHtml"></span>
+              <span>Export HTML</span>
+            </button>
+            <button id="btnExportCsv" class="btn btn-outline flex-1">
+              <span class="icon-wrap" id="iconExportCsv"></span>
+              <span>Export CSV</span>
+            </button>
+          </div>
+
+          <button id="btnNewCheck" class="btn btn-secondary btn-block margin-top-sm hidden">
+            <span class="icon-wrap" id="iconNewCheck"></span>
+            <span>Start New Check</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Settings View -->
+      <section class="view-panel" id="viewSettings">
+        <div class="settings-group">
+          <label class="settings-label">Appearance</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="theme" value="system">
+              <span class="radio-custom"></span>
+              <span class="icon-wrap" id="iconThemeSystem"></span>
+              <span>System</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="theme" value="light">
+              <span class="radio-custom"></span>
+              <span class="icon-wrap" id="iconThemeLight"></span>
+              <span>Light</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="theme" value="dark">
+              <span class="radio-custom"></span>
+              <span class="icon-wrap" id="iconThemeDark"></span>
+              <span>Dark</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label for="settingsDefaultCountry">Default Country</label>
+          <select id="settingsDefaultCountry" class="form-control"></select>
+        </div>
+
+        <div class="about-card">
+          <div class="about-title">BWAV</div>
+          <div class="about-version">Version 1.0.0</div>
+          <p class="about-desc">Bulk WhatsApp Number Validator — free, open, privacy-first local browser utility.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Custom Modal (replaces native alert/confirm) -->
+  <div id="modalOverlay" class="modal-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalMessage">
+    <div class="modal-card">
+      <div class="modal-icon-wrap" id="modalIconWrap">
+        <span id="modalIcon"></span>
+      </div>
+      <h2 class="modal-title" id="modalTitle"></h2>
+      <p class="modal-message" id="modalMessage"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary modal-cancel" id="modalCancel">Cancel</button>
+        <button type="button" class="btn modal-confirm btn-primary" id="modalConfirm">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="countries.js"></script>
+  <script src="normalizer.js"></script>
+  <script src="parser.js"></script>
+  <script src="state.js"></script>
+  <script src="exporter.js"></script>
+  <script src="icons.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
