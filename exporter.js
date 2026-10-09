@@ -287,7 +287,7 @@ function generateHtmlReport(job) {
   <div class="container">
     <header>
       <div class="brand-title">
-        Bulk WhatsApp Number Validator Report
+        Bulk WhatsApp Number Checker Report
       </div>
       <div class="sub-title">
         Generated on ${escapeHtml(dateText)} • Duration: ${escapeHtml(durationText)}
