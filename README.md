@@ -10,6 +10,8 @@
 
 BWAV is a Chrome extension that tells you whether a phone number is on WhatsApp, one at a time or by the hundreds. It drives your own WhatsApp Web tab and reads the screen, the same way you would. No third-party APIs, no servers, no sneaky data collection.
 
+[![Install from the Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-Install-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/gifnnmneimfmfjinbcajcdehmjidbplo?utm_source=item-share-cb)
+
 ![BWAV popup](assets/screenshots/01.png)
 
 ## What it does
@@ -31,7 +33,13 @@ BWAV is a Chrome extension that tells you whether a phone number is on WhatsApp,
 
 No WhatsApp Business API. No paid gateways. Just your browser doing what it can already do.
 
-## Install (unpacked)
+## Install
+
+### Chrome Web Store (recommended)
+
+[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/gifnnmneimfmfjinbcajcdehmjidbplo?utm_source=item-share-cb)
+
+### Unpacked (for development)
 
 1. Download or clone this repo.
 2. Open `chrome://extensions`.
