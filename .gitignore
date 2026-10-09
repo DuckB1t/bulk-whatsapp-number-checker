@@ -1,0 +1,9 @@
+# Local opencode config (contains the BWAV MCP auth token)
+opencode.json
+
+# Store listing assets (uploaded via the CWS dashboard, not shipped in the repo)
+webstore_assets/
+
+# Demo/sample files
+sample_numbers.csv
+sample_numbers.txt

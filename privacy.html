@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — BWAV: Bulk WhatsApp Number Validator</title>
+<meta name="description" content="Privacy policy for the BWAV Chrome extension (Bulk WhatsApp Number Validator).">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; color: #1f2328; line-height: 1.6; }
+  h1 { font-size: 1.6em; }
+  h2 { font-size: 1.15em; margin-top: 1.6em; }
+  code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  footer { margin-top: 3em; color: #666; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy</h1>
+<p><strong>BWAV: Bulk WhatsApp Number Validator</strong> (the "extension") — effective October 10, 2026.</p>
+
+<p>Short version: this extension collects nothing. No accounts, no analytics, no tracking, no servers, no ads, no selling of anything. Everything happens in your browser.</p>
+
+<h2>What the extension does</h2>
+<p>The extension checks whether phone numbers are registered on WhatsApp by opening or reusing a WhatsApp Web tab in your own browser and inspecting the page, the same way you would by hand.</p>
+
+<h2>Data we collect</h2>
+<p>We do not collect any data. The extension has no backend, no analytics, and no third-party services.</p>
+
+<h2>Phone numbers you check</h2>
+<ul>
+  <li>Numbers you enter are stored <strong>locally</strong> in your browser's <code>chrome.storage.local</code> so your job state survives restarts.</li>
+  <li>To perform a check, the extension sends the number to <code>web.whatsapp.com</code> inside <strong>your own logged-in WhatsApp Web session</strong> — the same request your browser would make if you opened that chat URL yourself.</li>
+  <li>Numbers are never transmitted to us or to any other server.</li>
+</ul>
+
+<h2>Optional AI Agent (MCP) bridge</h2>
+<p>The extension can optionally run a local bridge (<code>mcp/server.js</code>) that listens on <code>127.0.0.1</code> only, protected by a token you generate. It is <strong>off by default</strong>. When enabled, it lets AI agents on your own machine submit checks through the extension. Nothing from this bridge leaves your computer.</p>
+
+<h2>Permissions</h2>
+<ul>
+  <li><code>storage</code> / <code>unlimitedStorage</code> — save your settings and job state locally.</li>
+  <li><code>tabs</code> — find and reuse your existing WhatsApp Web tab.</li>
+  <li><code>clipboardWrite</code> — copy the MCP agent config when you ask it to.</li>
+  <li><code>web.whatsapp.com</code> — the core function: inspect the page to determine registration status.</li>
+  <li><code>127.0.0.1</code> / <code>localhost</code> — the optional local MCP bridge.</li>
+</ul>
+
+<h2>Data retention &amp; deletion</h2>
+<p>All data is stored locally in your browser. You can delete it at any time by clearing the extension's data in <code>chrome://extensions</code> or by uninstalling the extension.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes, the effective date above will be updated.</p>
+
+<h2>Contact</h2>
+<p>Questions? Open an issue on <a href="https://github.com/duckb1t/bulk-whatsapp-number-checker">GitHub</a> or visit <a href="https://heyjuyel.com">heyjuyel.com</a>.</p>
+
+<footer>Not affiliated with WhatsApp or Meta.</footer>
+
+</body>
+</html>

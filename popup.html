@@ -11,7 +11,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="brand">
-        <span class="brand-icon" id="brandIcon"></span>
+        <img src="icons/icon48.png" alt="" class="brand-icon" id="brandIcon">
         <span class="brand-name">BWAV</span>
       </div>
       <nav class="nav-tabs">
@@ -36,8 +36,12 @@
       <!-- Single Mode View -->
       <section class="view-panel active" id="viewSingle">
         <div class="form-group">
-          <label for="singleCountrySelect">Country</label>
-          <select id="singleCountrySelect" class="form-control"></select>
+          <label for="singleCountryPickerInput">Country</label>
+          <div class="country-picker">
+            <input type="text" id="singleCountryPickerInput" class="form-control country-picker-input" placeholder="Search or select country" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">
+            <select id="singleCountrySelect" class="hidden" tabindex="-1" aria-hidden="true"></select>
+            <ul class="country-picker-list hidden" id="singleCountryList" role="listbox"></ul>
+          </div>
         </div>
 
         <div class="form-group">
@@ -67,9 +71,13 @@
         <div id="bulkInputContainer" class="bulk-subview">
           <div class="form-group">
             <div class="label-row">
-              <label for="bulkCountrySelect">Default Country</label>
+              <label for="bulkCountryPickerInput">Default Country</label>
             </div>
-            <select id="bulkCountrySelect" class="form-control"></select>
+            <div class="country-picker">
+              <input type="text" id="bulkCountryPickerInput" class="form-control country-picker-input" placeholder="Search or select country" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">
+              <select id="bulkCountrySelect" class="hidden" tabindex="-1" aria-hidden="true"></select>
+              <ul class="country-picker-list hidden" id="bulkCountryList" role="listbox"></ul>
+            </div>
           </div>
 
           <div class="form-group">
@@ -216,8 +224,59 @@
         </div>
 
         <div class="settings-group">
-          <label for="settingsDefaultCountry">Default Country</label>
-          <select id="settingsDefaultCountry" class="form-control"></select>
+          <label for="settingsCountryPickerInput">Default Country</label>
+          <div class="country-picker">
+            <input type="text" id="settingsCountryPickerInput" class="form-control country-picker-input" placeholder="Search or select country" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">
+            <select id="settingsDefaultCountry" class="hidden" tabindex="-1" aria-hidden="true"></select>
+            <ul class="country-picker-list hidden" id="settingsCountryList" role="listbox"></ul>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="mcp-header">
+            <label class="settings-label mcp-title" for="mcpEnabled">AI Agent (MCP)</label>
+            <span id="mcpStatusBadge" class="badge mcp-status">Off</span>
+          </div>
+
+          <label class="switch">
+            <input type="checkbox" id="mcpEnabled">
+            <span class="switch-slider"></span>
+            <span class="switch-text">Enable MCP bridge</span>
+          </label>
+
+          <div id="mcpOptionsWrap" class="mcp-options hidden">
+            <div class="mcp-field">
+              <label for="mcpPortInput">Bridge port</label>
+              <input type="number" id="mcpPortInput" class="form-control" min="1024" max="65535" step="1" inputmode="numeric">
+            </div>
+
+            <div class="mcp-field">
+              <label for="mcpTokenInput">Auth token</label>
+              <div class="mcp-token-row">
+                <input type="text" id="mcpTokenInput" class="form-control" readonly>
+                <button type="button" id="mcpRegenToken" class="btn btn-secondary">Regenerate</button>
+              </div>
+            </div>
+
+            <label class="switch">
+              <input type="checkbox" id="mcpAllowBulk">
+              <span class="switch-slider"></span>
+              <span class="switch-text">Allow bulk checks</span>
+            </label>
+
+            <div class="mcp-field margin-top-sm">
+              <label for="mcpMaxBatchInput">Max numbers per request</label>
+              <input type="number" id="mcpMaxBatchInput" class="form-control" min="1" max="1000" step="1" inputmode="numeric">
+            </div>
+
+            <div class="mcp-field">
+              <label for="mcpConnectPrompt">Connection prompt</label>
+              <pre id="mcpConnectPrompt" class="mcp-prompt"></pre>
+              <button type="button" id="btnCopyMcpPrompt" class="btn btn-secondary btn-block margin-top-sm">Copy prompt</button>
+            </div>
+          </div>
+
+          <p class="mcp-hint">Turn on the bridge, copy the prompt, and paste it into your AI agent (opencode, Claude Desktop, Cursor). Keep Chrome open with a logged-in WhatsApp Web tab.</p>
         </div>
 
         <div class="about-card">
@@ -228,6 +287,15 @@
       </section>
 
     </main>
+
+    <!-- Credits Footer -->
+    <footer class="app-footer">
+      <a href="https://heyjuyel.com" target="_blank" rel="noopener noreferrer">Made by Juyel Rana</a>
+      <span class="footer-sep" aria-hidden="true">·</span>
+      <a href="https://github.com/duckb1t?tab=repositories" target="_blank" rel="noopener noreferrer">More tools</a>
+      <span class="footer-sep" aria-hidden="true">·</span>
+      <a href="https://github.com/duckb1t" target="_blank" rel="noopener noreferrer">GitHub @duckb1t</a>
+    </footer>
   </div>
 
   <!-- Custom Modal (replaces native alert/confirm) -->

@@ -3,7 +3,7 @@
  * Coordinates persistent checking queue, WhatsApp Web tab reuse, and state recovery.
  */
 
-importScripts('countries.js', 'normalizer.js', 'parser.js', 'state.js', 'queue.js');
+importScripts('countries.js', 'normalizer.js', 'parser.js', 'state.js', 'queue.js', 'mcp-bridge.js');
 
 const queue = new QueueController();
 let activeCheckTabId = null;
@@ -107,6 +107,19 @@ async function executeWhatsAppCheck(item, timeoutMs = DEFAULT_SETTINGS.checkTime
 
 queue.setCheckExecutor(executeWhatsAppCheck);
 
+// MCP bridge: lets local AI agents (via mcp/server.js) drive checks. Reuses the
+// same single-flight resolver as the popup so MCP and UI checks never overlap.
+const mcpBridge = new McpBridge();
+mcpBridge.configure({
+  getSettings: () => StateManager.getSettings(),
+  executeCheck: executeWhatsAppCheck,
+  isBusy: () => !!activeCheckResolver,
+  onStatusChange: (status) => {
+    chrome.runtime.sendMessage({ type: 'MCP_STATUS_UPDATED', status }).catch(() => {});
+  }
+});
+mcpBridge.start();
+
 // Handle messages from Popup UI
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
@@ -181,12 +194,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.type === 'GET_JOB_STATUS') {
       const job = await StateManager.getActiveJob();
       sendResponse({ success: true, job: job || null });
+    } else if (message.type === 'MCP_GET_STATUS') {
+      sendResponse({ success: true, status: mcpBridge.getStatus() });
     } else if (message.type === 'CLEAR_JOB') {
       await StateManager.clearActiveJob();
       sendResponse({ success: true });
     }
   })();
   return true;
+});
+
+// Restart the MCP bridge only when MCP-relevant settings change.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.settings) return;
+  const prev = changes.settings.oldValue || {};
+  const next = changes.settings.newValue || {};
+  const mcpKeys = ['mcpEnabled', 'mcpPort', 'mcpToken', 'mcpAllowBulk', 'mcpMaxBatch', 'defaultCountry'];
+  if (mcpKeys.some((k) => prev[k] !== next[k])) mcpBridge.refresh();
 });
 
 // Auto-recovery on service worker startup or extension update

@@ -10,10 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderIcons();
   await initTheme();
   populateCountrySelectsSync();
+  setupCountryPickers();
   setupNavigation();
   setupSingleMode();
   setupBulkMode();
   setupSettingsMode();
+  setupMcpSettings();
   setupModal();
 
   // Load state atomically on launch before any paint
@@ -30,6 +32,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (changes.singleState) {
         applySingleState(changes.singleState.newValue);
       }
+    });
+  }
+
+  // Live MCP bridge status broadcasts from the service worker
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message && message.type === 'MCP_STATUS_UPDATED') renderMcpStatus(message.status);
     });
   }
 });
@@ -58,7 +67,6 @@ async function fetchActiveJobFromWorkerOrStorage() {
 // Render SVG icons (No emojis!)
 function renderIcons() {
   const iconMap = {
-    brandIcon: 'globe',
     iconSingle: 'single',
     iconBulk: 'bulk',
     iconSettings: 'settings',
@@ -122,6 +130,175 @@ function populateCountrySelectsSync() {
   if (settingsSel) settingsSel.innerHTML = optionsHtml;
 }
 
+// Country picker: searchable combobox over the global COUNTRIES list.
+// The original <select> is kept (hidden) as the value/change contract — popup.js
+// reads/writes .value and listens for 'change' on it, so nothing there changes.
+// A value getter/setter mirrors programmatic sets (draft/default restore,
+// settings default sync) onto the visible input; user picks dispatch 'change'.
+function createCountryPicker({ inputId, selectId, listId }) {
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  const list = document.getElementById(listId);
+  if (!input || !select || !list) return null;
+  if (select.dataset.picker) return null;
+
+  const countries = (typeof COUNTRIES !== 'undefined' && Array.isArray(COUNTRIES)) ? COUNTRIES : [];
+  const labelOf = (c) => `${c.name} (${c.dialCode})`;
+
+  let selectedCode = '';
+  let matches = [];
+  let highlighted = -1;
+  let isOpen = false;
+
+  Object.defineProperty(select, 'value', {
+    get: () => selectedCode,
+    set: (v) => {
+      selectedCode = v || '';
+      syncDisplay();
+    },
+    configurable: true
+  });
+
+  function syncDisplay() {
+    const c = countries.find((x) => x.code === selectedCode);
+    input.value = c ? labelOf(c) : '';
+  }
+
+  function openList() {
+    isOpen = true;
+    matches = countries;
+    highlighted = matches.length ? 0 : -1;
+    renderList();
+    list.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeList() {
+    if (!isOpen) return;
+    isOpen = false;
+    list.classList.add('hidden');
+    input.setAttribute('aria-expanded', 'false');
+    syncDisplay(); // restore the selected label over any filter text
+  }
+
+  function renderList() {
+    list.textContent = '';
+    if (!matches.length) {
+      const li = document.createElement('li');
+      li.className = 'country-picker-empty';
+      li.textContent = 'No matches';
+      list.appendChild(li);
+      return;
+    }
+    matches.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.className = 'country-picker-item';
+      li.setAttribute('role', 'option');
+      if (i === highlighted) li.classList.add('highlighted');
+      if (c.code === selectedCode) li.classList.add('selected');
+      li.textContent = labelOf(c);
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // keep input focus; blur would close the list first
+        pick(c);
+      });
+      list.appendChild(li);
+    });
+  }
+
+  function moveHighlight(delta) {
+    if (!isOpen) {
+      openList();
+      return;
+    }
+    if (!matches.length) return;
+    highlighted = (highlighted + delta + matches.length) % matches.length;
+    renderList();
+    const el = list.children[highlighted];
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }
+
+  function pick(c) {
+    select.value = c.code;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    closeList();
+    input.focus();
+  }
+
+  input.addEventListener('focus', openList);
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    matches = q
+      ? countries.filter((c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.dialCode.toLowerCase().includes(q) ||
+          c.code.toLowerCase().includes(q))
+      : countries;
+    highlighted = matches.length ? 0 : -1;
+    if (!isOpen) {
+      isOpen = true;
+      list.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+    }
+    renderList();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveHighlight(1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveHighlight(-1);
+    } else if (e.key === 'Enter') {
+      if (isOpen && matches.length && highlighted >= 0) {
+        e.preventDefault();
+        pick(matches[highlighted]);
+      }
+    } else if (e.key === 'Escape') {
+      if (isOpen) {
+        e.preventDefault();
+        closeList();
+      }
+    }
+  });
+
+  input.addEventListener('blur', closeList);
+
+  document.addEventListener('mousedown', (e) => {
+    const wrap = input.closest('.country-picker');
+    if (wrap && !wrap.contains(e.target)) closeList();
+  });
+
+  // Default: Bangladesh is the first entry and the default selection
+  const initial = countries.find((c) => c.code === 'BD') || countries[0];
+  select.value = initial ? initial.code : '';
+  select.dataset.picker = '1';
+
+  return {
+    get value() { return selectedCode; },
+    set value(v) { select.value = v; }
+  };
+}
+
+function setupCountryPickers() {
+  createCountryPicker({
+    inputId: 'singleCountryPickerInput',
+    selectId: 'singleCountrySelect',
+    listId: 'singleCountryList'
+  });
+  createCountryPicker({
+    inputId: 'bulkCountryPickerInput',
+    selectId: 'bulkCountrySelect',
+    listId: 'bulkCountryList'
+  });
+  createCountryPicker({
+    inputId: 'settingsCountryPickerInput',
+    selectId: 'settingsDefaultCountry',
+    listId: 'settingsCountryList'
+  });
+}
+
 // Switch Tab
 function switchTab(targetId) {
   const tabs = document.querySelectorAll('.nav-tab');
@@ -164,6 +341,18 @@ function setupSingleMode() {
       StateManager.saveSingleDraft(input.value, countrySel.value);
     }
   };
+
+  // Auto-select the country picker when the number starts with a dial code (+880...)
+  if (input && countrySel) {
+    input.addEventListener('input', () => {
+      const v = input.value.trim();
+      if (v.startsWith('+')) {
+        const digits = v.slice(1).replace(/\D/g, '');
+        const c = (typeof matchCountryByDialCode === 'function') ? matchCountryByDialCode(digits) : null;
+        if (c) countrySel.value = c.code;
+      }
+    });
+  }
 
   if (input) input.addEventListener('input', saveSingleDraft);
   if (countrySel) countrySel.addEventListener('change', saveSingleDraft);
@@ -748,3 +937,155 @@ function setupSettingsMode() {
     });
   }
 }
+
+// AI Agent (MCP) settings
+function setupMcpSettings() {
+  const enabled = document.getElementById('mcpEnabled');
+  const portInput = document.getElementById('mcpPortInput');
+  const tokenInput = document.getElementById('mcpTokenInput');
+  const regenBtn = document.getElementById('mcpRegenToken');
+  const allowBulk = document.getElementById('mcpAllowBulk');
+  const maxBatchInput = document.getElementById('mcpMaxBatchInput');
+  const copyBtn = document.getElementById('btnCopyMcpPrompt');
+  const promptBox = document.getElementById('mcpConnectPrompt');
+  const settingsTab = document.getElementById('tabBtnSettings');
+
+  if (!enabled || !portInput || !tokenInput || !promptBox) return;
+
+  StateManager.getSettings().then((s) => {
+    enabled.checked = !!s.mcpEnabled;
+    portInput.value = s.mcpPort || DEFAULT_SETTINGS.mcpPort;
+    tokenInput.value = s.mcpToken || '';
+    allowBulk.checked = s.mcpAllowBulk !== false;
+    maxBatchInput.value = s.mcpMaxBatch || DEFAULT_SETTINGS.mcpMaxBatch;
+    updateMcpVisibility(s.mcpEnabled);
+    renderMcpPrompt(s);
+  });
+
+  enabled.addEventListener('change', async () => {
+    if (enabled.checked) await StateManager.ensureMcpToken();
+    await StateManager.saveSettings({ mcpEnabled: enabled.checked });
+    const s = await StateManager.getSettings();
+    tokenInput.value = s.mcpToken || '';
+    updateMcpVisibility(enabled.checked);
+    renderMcpPrompt(s);
+  });
+
+  portInput.addEventListener('change', async () => {
+    const port = clampMcpPort(parseInt(portInput.value, 10));
+    portInput.value = port;
+    await StateManager.saveSettings({ mcpPort: port });
+    renderMcpPrompt(await StateManager.getSettings());
+  });
+
+  allowBulk.addEventListener('change', () => StateManager.saveSettings({ mcpAllowBulk: allowBulk.checked }));
+
+  maxBatchInput.addEventListener('change', async () => {
+    const max = clampMcpBatch(parseInt(maxBatchInput.value, 10));
+    maxBatchInput.value = max;
+    await StateManager.saveSettings({ mcpMaxBatch: max });
+  });
+
+  regenBtn.addEventListener('click', async () => {
+    const prev = tokenInput.value;
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    tokenInput.value = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    await StateManager.saveSettings({ mcpToken: tokenInput.value });
+    renderMcpPrompt(await StateManager.getSettings());
+    if (prev) {
+      const original = regenBtn.textContent;
+      regenBtn.textContent = 'Updated';
+      setTimeout(() => { regenBtn.textContent = original; }, 1500);
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const text = promptBox.textContent || '';
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      // Fallback when the clipboard API is unavailable.
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      document.body.removeChild(ta);
+    }
+    const original = copyBtn.textContent;
+    copyBtn.textContent = ok ? 'Copied' : 'Copy failed';
+    setTimeout(() => { copyBtn.textContent = original; }, 1500);
+  });
+
+  if (settingsTab) settingsTab.addEventListener('click', refreshMcpStatus);
+  refreshMcpStatus();
+}
+
+function clampMcpPort(value) {
+  if (!Number.isFinite(value)) return DEFAULT_SETTINGS.mcpPort;
+  return Math.min(Math.max(Math.trunc(value), 1024), 65535);
+}
+
+function clampMcpBatch(value) {
+  if (!Number.isFinite(value)) return DEFAULT_SETTINGS.mcpMaxBatch;
+  return Math.min(Math.max(Math.trunc(value), 1), 1000);
+}
+
+function updateMcpVisibility(on) {
+  const wrap = document.getElementById('mcpOptionsWrap');
+  if (wrap) wrap.classList.toggle('hidden', !on);
+}
+
+function buildMcpConnectPrompt(port, token) {
+  return [
+    'Add this MCP server to your AI agent configuration, then restart the agent:',
+    '',
+    '{',
+    '  "mcpServers": {',
+    '    "bwav": {',
+    '      "command": "node",',
+    '      "args": ["<ABSOLUTE_PATH_TO_EXTENSION>/mcp/server.js"],',
+    '      "env": {',
+    '        "BWAV_MCP_PORT": "' + port + '",',
+    '        "BWAV_MCP_TOKEN": "' + token + '"',
+    '      }',
+    '    }',
+    '  }',
+    '}',
+    '',
+    'Replace <ABSOLUTE_PATH_TO_EXTENSION> with the absolute path to the BWAV',
+    'extension folder (the one containing manifest.json).',
+    '',
+    'Keep the MCP bridge ON (port ' + port + ') with a logged-in WhatsApp Web tab',
+    'open. Then call the tools check_whatsapp_number, check_whatsapp_numbers, and',
+    'bridge_status.'
+  ].join('\n');
+}
+
+function renderMcpPrompt(settings) {
+  const box = document.getElementById('mcpConnectPrompt');
+  if (!box) return;
+  const port = settings.mcpPort || DEFAULT_SETTINGS.mcpPort;
+  const token = settings.mcpToken || '<enable the bridge to generate a token>';
+  box.textContent = buildMcpConnectPrompt(port, token);
+}
+
+function refreshMcpStatus() {
+  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) return;
+  chrome.runtime.sendMessage({ type: 'MCP_GET_STATUS' }, (res) => {
+    if (chrome.runtime.lastError) return;
+    if (res && res.success && res.status) renderMcpStatus(res.status);
+  });
+}
+
+function renderMcpStatus(status) {
+  const badge = document.getElementById('mcpStatusBadge');
+  if (!badge) return;
+  badge.textContent = status && status.message ? status.message : 'Off';
+  badge.classList.toggle('on', !!(status && status.connected));
+}
+
+globalThis.createCountryPicker = createCountryPicker;
